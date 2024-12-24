@@ -7,8 +7,14 @@ from datasets import load_dataset
 
 TOKENS: Dict[str, int] = {}         # tokenizer
 SNEKOT: Dict[int, str] = {}         # de-tokenizer
-TASK = "qa3" # ["qa1",...,"qa20"]
+TASK = "qa3"                        # ["qa1",...,"qa20"]
 LANG = "en"
+
+PAD   = "<PAD>"
+
+PAD_LEN = 1024
+
+SPECIAL_TOKENS = " ".join([PAD])
 
 
 def preprocess(text: str) -> str:
@@ -38,6 +44,14 @@ def parse(data) -> (List[str], List[str]):
   return inputs, targets
 
 
+def pad(tokens: List[int]) -> List[int]:
+  if PAD_LEN > 0:
+    pad_amount = PAD_LEN - len(tokens)
+    pad_token = [TOKENS[PAD]]
+    tokens.extend(pad_token * pad_amount)
+  return tokens
+
+
 def tokenize(text: str) -> List[int]:
   ret = []
   for word in text.split():
@@ -46,7 +60,8 @@ def tokenize(text: str) -> List[int]:
       TOKENS[word] = new_token
       SNEKOT[new_token] = word
     ret.append(TOKENS[word])
-  return ret
+  return pad(ret)
+
 
 def detokenize(tokens: List[int]) -> str:
   words = [SNEKOT[_] for _ in tokens]
@@ -62,8 +77,7 @@ def pipeline(dataset, key) -> (List[int], List[int]):
 
 if __name__ == "__main__":
   print("=== loading, parsing, preprocessing and tokenizing dataset ===")
+  tokenize(SPECIAL_TOKENS) # insert special tokens
   dataset = load_dataset("babi_qa", type=LANG, task_no=TASK)
   X_train, Y_train = pipeline(dataset, "train")
   X_test,  Y_test  = pipeline(dataset, "test")
-
-  print(detokenize(X_train[50]))
